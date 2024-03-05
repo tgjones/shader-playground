@@ -137,7 +137,7 @@ internal static class Utilities
     public static string DownloadAndUnzipCompiler(this BuildContext context, string url, string binariesFolderName, string version, bool cache, string filesToCopy, ZipFormat format = ZipFormat.Zip)
     {
         var tempFileName = context.DownloadCompiler(url, binariesFolderName, version, cache);
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/{binariesFolderName}/{version}";
+        var binariesFolder = $"{context.SrcBinariesPath}/{binariesFolderName}/{version}";
 
         context.Unzip(tempFileName, binariesFolder, filesToCopy, format);
 
@@ -147,8 +147,8 @@ internal static class Utilities
     public static MSBuildSettings CreateCppBuildSettings(this BuildContext context)
     {
         return new MSBuildSettings()
-          .UseToolVersion(MSBuildToolVersion.VS2019)
-          .WithProperty("PlatformToolset", "v142")
+          .UseToolVersion(MSBuildToolVersion.VS2022)
+          .WithProperty("PlatformToolset", "v143")
           .WithProperty("WindowsTargetPlatformVersion", "10.0.19041.0")
           .SetConfiguration(context.BuildConfiguration);
     }

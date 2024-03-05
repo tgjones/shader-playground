@@ -14,6 +14,8 @@ public static class Program
 
 public class BuildContext : FrostingContext
 {
+    public string SrcPath { get; }
+    public string SrcBinariesPath { get; }
     public string ArtifactsPath { get; }
 
     public bool AlwaysCache { get; }
@@ -22,6 +24,8 @@ public class BuildContext : FrostingContext
     public BuildContext(ICakeContext context)
         : base(context)
     {
+        SrcPath = "../src";
+        SrcBinariesPath = $"{SrcPath}/ShaderPlayground.Core/Binaries";
         ArtifactsPath = "../artifacts";
 
         AlwaysCache = context.Argument("always-cache", false);

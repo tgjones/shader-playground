@@ -16,8 +16,8 @@ public sealed class PrepareBuildDirectory : FrostingTask<BuildContext>
     public override void Run(BuildContext context)
     {
         context.EnsureDirectoryExists(context.ArtifactsPath);
-        context.EnsureDirectoryExists("./src/ShaderPlayground.Core/Binaries");
-        context.CleanDirectory("./src/ShaderPlayground.Core/Binaries");
+        context.EnsureDirectoryExists(context.SrcBinariesPath);
+        context.CleanDirectory(context.SrcBinariesPath);
     }
 }
 
@@ -77,7 +77,7 @@ public sealed class DownloadMaliOfflineCompiler : FrostingTask<BuildContext>
                   Arguments = $@"x -o""{mobileStudioFolder}"" ""{armMobileStudioExePath}"" ""mali_offline_compiler/*"" ""mali_offline_compiler/*/*"""
               });
 
-            var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/mali/{maliVersion}";
+            var binariesFolder = $"{context.SrcBinariesPath}/mali/{maliVersion}";
 
             context.EnsureDirectoryExists(binariesFolder);
             context.CleanDirectory(binariesFolder);
@@ -174,7 +174,7 @@ public sealed class DownloadSpirvCross : FrostingTask<BuildContext>
 
         context.MSBuild(srcDirectory + "/SPIRV-Cross.vcxproj", context.CreateCppBuildSettings());
 
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/spirv-cross/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/spirv-cross/trunk";
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
 
@@ -197,7 +197,7 @@ public sealed class DownloadSpirvCrossIspc : FrostingTask<BuildContext>
 
         context.MSBuild(unzippedFolder + "/SPIRV-Cross-master-ispc/msvc/SPIRV-Cross.vcxproj", context.CreateCppBuildSettings());
 
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/spirv-cross-ispc/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/spirv-cross-ispc/trunk";
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
 
@@ -304,7 +304,7 @@ public sealed class DownloadSlang : FrostingTask<BuildContext>
 
             context.CopyFiles(nvrtcPaths, binariesFolder);
 
-            context.CopyFiles($"./src/ShaderPlayground.Core/Binaries/dxc/trunk/dxcompiler.dll", binariesFolder);
+            context.CopyFiles($"{context.SrcBinariesPath}/dxc/trunk/dxcompiler.dll", binariesFolder);
         }
 
         DownloadSlang("0.10.24");
@@ -331,7 +331,7 @@ public sealed class DownloadHlslParser : FrostingTask<BuildContext>
 
         context.MSBuild(unzippedFolder + "/hlslparser-master/hlslparser.vcxproj", context.CreateCppBuildSettings());
 
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/hlslparser/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/hlslparser/trunk";
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
 
@@ -459,7 +459,7 @@ public sealed class CopyPowerVR : FrostingTask<BuildContext>
     {
         void CopyVersion(string version)
         {
-            var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/powervr/{version}";
+            var binariesFolder = $"{context.SrcBinariesPath}/powervr/{version}";
             context.EnsureDirectoryExists(binariesFolder);
             context.CleanDirectory(binariesFolder);
 
@@ -479,7 +479,7 @@ public sealed class BuildAngle : FrostingTask<BuildContext>
             WorkingDirectory = context.MakeAbsolute(context.Directory("./external/angle"))
         });
 
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/angle/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/angle/trunk";
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
 
@@ -504,7 +504,7 @@ public sealed class BuildClspv : FrostingTask<BuildContext>
             WorkingDirectory = context.MakeAbsolute(context.Directory("./external/clspv"))
         });
 
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/clspv/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/clspv/trunk";
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
 
@@ -524,7 +524,7 @@ public sealed class BuildTint : FrostingTask<BuildContext>
             WorkingDirectory = context.MakeAbsolute(context.Directory("./external/tint"))
         });
 
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/tint/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/tint/trunk";
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
 
@@ -541,7 +541,7 @@ public sealed class BuildRustGpu : FrostingTask<BuildContext>
     {
         // TODO: Actually build from source.
 
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/rust-gpu/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/rust-gpu/trunk";
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
 
@@ -577,7 +577,7 @@ public sealed class BuildNaga : FrostingTask<BuildContext>
                         WorkingDirectory = repoPath,
                     });
 
-                var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/naga/{displayName}";
+                var binariesFolder = $"{context.SrcBinariesPath}/naga/{displayName}";
                 context.EnsureDirectoryExists(binariesFolder);
                 context.CleanDirectory(binariesFolder);
 
@@ -612,7 +612,7 @@ public sealed class BuildNaga : FrostingTask<BuildContext>
                         WorkingDirectory = $"{repoPath}/naga-cli",
                     });
 
-                var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/naga/{tag}";
+                var binariesFolder = $"{context.SrcBinariesPath}/naga/{tag}";
                 context.EnsureDirectoryExists(binariesFolder);
                 context.CleanDirectory(binariesFolder);
 
@@ -640,7 +640,7 @@ public sealed class BuildFxcShim : FrostingTask<BuildContext>
         });
 
         var fxcVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo("./lib/x64/d3dcompiler_47.dll").ProductVersion;
-        var binariesFolder = $"./src/ShaderPlayground.Core/Binaries/fxc/{fxcVersion}";
+        var binariesFolder = $"{context.SrcBinariesPath}/fxc/{fxcVersion}";
 
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
@@ -657,7 +657,7 @@ public sealed class BuildHlslCcShim : FrostingTask<BuildContext>
     {
         context.MSBuild("./shims/ShaderPlayground.Shims.HLSLcc/ShaderPlayground.Shims.HLSLcc.vcxproj", context.CreateCppBuildSettings());
 
-        var binariesFolder = "./src/ShaderPlayground.Core/Binaries/hlslcc/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/hlslcc/trunk";
 
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
@@ -681,7 +681,7 @@ public sealed class BuildGlslOptimizerShim : FrostingTask<BuildContext>
             "./shims/ShaderPlayground.Shims.GlslOptimizer/ShaderPlayground.Shims.GlslOptimizer.vcxproj",
             context.CreateCppBuildSettings());
 
-        var binariesFolder = "./src/ShaderPlayground.Core/Binaries/glsl-optimizer/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/glsl-optimizer/trunk";
 
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
@@ -705,7 +705,7 @@ public sealed class BuildHlsl2GlslShim : FrostingTask<BuildContext>
             "./shims/ShaderPlayground.Shims.Hlsl2Glsl/ShaderPlayground.Shims.Hlsl2Glsl.vcxproj",
             context.CreateCppBuildSettings());
 
-        var binariesFolder = "./src/ShaderPlayground.Core/Binaries/hlsl2glsl/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/hlsl2glsl/trunk";
 
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
@@ -723,7 +723,7 @@ public sealed class BuildSmolvShim : FrostingTask<BuildContext>
     {
         context.MSBuild("./shims/ShaderPlayground.Shims.Smolv/ShaderPlayground.Shims.Smolv.vcxproj", context.CreateCppBuildSettings());
 
-        var binariesFolder = "./src/ShaderPlayground.Core/Binaries/smol-v/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/smol-v/trunk";
 
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
@@ -741,7 +741,7 @@ public sealed class BuildMinizShim : FrostingTask<BuildContext>
     {
         context.MSBuild("./shims/ShaderPlayground.Shims.Miniz/ShaderPlayground.Shims.Miniz.vcxproj", context.CreateCppBuildSettings());
 
-        var binariesFolder = "./src/ShaderPlayground.Core/Binaries/miniz/2.0.7";
+        var binariesFolder = $"{context.SrcBinariesPath}/miniz/2.0.7";
 
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
@@ -759,7 +759,7 @@ public sealed class BuildYarivShim : FrostingTask<BuildContext>
     {
         context.MSBuild("./shims/ShaderPlayground.Shims.Yariv/ShaderPlayground.Shims.Yariv.vcxproj", context.CreateCppBuildSettings());
 
-        var binariesFolder = "./src/ShaderPlayground.Core/Binaries/yari-v/trunk";
+        var binariesFolder = $"{context.SrcBinariesPath}/yari-v/trunk";
 
         context.EnsureDirectoryExists(binariesFolder);
         context.CleanDirectory(binariesFolder);
@@ -792,7 +792,7 @@ public sealed class Build : FrostingTask<BuildContext>
         context.EnsureDirectoryExists(outputFolder);
         context.CleanDirectory(outputFolder);
 
-        context.DotNetPublish("./src/ShaderPlayground.Web/ShaderPlayground.Web.csproj", new DotNetPublishSettings
+        context.DotNetPublish($"{context.SrcPath}/ShaderPlayground.Web/ShaderPlayground.Web.csproj", new DotNetPublishSettings
         {
             Configuration = context.BuildConfiguration,
             OutputDirectory = outputFolder
@@ -807,7 +807,7 @@ public sealed class Test : FrostingTask<BuildContext>
 {
     public override void Run(BuildContext context)
     {
-        context.DotNetTest("./src/ShaderPlayground.Core.Tests/ShaderPlayground.Core.Tests.csproj", new DotNetTestSettings
+        context.DotNetTest($"{context.SrcPath}/ShaderPlayground.Core.Tests/ShaderPlayground.Core.Tests.csproj", new DotNetTestSettings
         {
             Configuration = context.BuildConfiguration
         });
