@@ -274,6 +274,7 @@ public sealed class DownloadXShaderCompiler : FrostingTask<BuildContext>
     }
 }
 
+[IsDependentOn(typeof(DownloadDxc))]
 public sealed class DownloadSlang : FrostingTask<BuildContext>
 {
     public override void Run(BuildContext context)
@@ -288,28 +289,9 @@ public sealed class DownloadSlang : FrostingTask<BuildContext>
         context.EnsureDirectoryExists(cudaFolder);
         context.CleanDirectory(cudaFolder);
 
-        void ExtractFile(string fileName)
-        {
-            context.RunAndCheckResult(
-                @"C:\Program Files\7-Zip\7z.exe",
-                new ProcessSettings
-                {
-                    Arguments = $@"e -o""{cudaFolder}"" ""{cudaExePath}"" cuda_nvrtc\nvrtc\bin\{fileName}"
-                });
-        }
+        context.Unzip(cudaExePath, cudaFolder, @"cuda_nvrtc\nvrtc\bin\*.*", ZipFormat.SevenZip);
 
-        var nvrtcFiles = new[]
-        {
-            "nvrtc64_110_0.dll",
-            "nvrtc-builtins64_110.dll"
-        };
-
-        foreach (var nvrtcFile in nvrtcFiles)
-        {
-            ExtractFile(nvrtcFile);
-        }
-
-        var nvrtcPaths = nvrtcFiles.Select(x => cudaFolder + "/" + x);
+        var nvrtcPaths = context.GetFiles(GlobPattern.FromString($"{cudaFolder}/*.*"));
 
         void DownloadSlang(string version)
         {
@@ -334,6 +316,7 @@ public sealed class DownloadSlang : FrostingTask<BuildContext>
         DownloadSlang("0.18.25");
         DownloadSlang("0.24.20");
         DownloadSlang("2024.0.6");
+        DownloadSlang("2024.0.15");
     }
 }
 
@@ -841,7 +824,6 @@ public sealed class Test : FrostingTask<BuildContext>
 [IsDependentOn(typeof(DownloadSpirvCross))]
 [IsDependentOn(typeof(DownloadSpirvCrossIspc))]
 [IsDependentOn(typeof(DownloadSpirvTools))]
-[IsDependentOn(typeof(DownloadSpirvToolsLegacy))]
 [IsDependentOn(typeof(DownloadXShaderCompiler))]
 [IsDependentOn(typeof(DownloadSlang))]
 [IsDependentOn(typeof(DownloadHlslParser))]
