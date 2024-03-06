@@ -12,16 +12,15 @@ using Cake.Core.Diagnostics;
 using Cake.Core.IO;
 using Cake.Frosting;
 using Cake.Git;
-using Octokit;
 using static Utilities;
 
 public sealed class PrepareBuildDirectory : FrostingTask<BuildContext>
 {
     public override void Run(BuildContext context)
     {
-        context.EnsureDirectoryExists(context.ArtifactsPath);
-        context.EnsureDirectoryExists(context.SrcBinariesPath);
-        context.CleanDirectory(context.SrcBinariesPath);
+        //context.EnsureDirectoryExists(context.ArtifactsPath);
+        //context.EnsureDirectoryExists(context.SrcBinariesPath);
+        //context.CleanDirectory(context.SrcBinariesPath);
     }
 }
 
@@ -174,7 +173,6 @@ public sealed class DownloadSpirvCross : AsyncFrostingTask<BuildContext>
 
         var client = CreateGitHubClient();
         var repository = await client.Repository.Get("KhronosGroup", "SPIRV-Cross");
-
         var mainBranch = await client.Repository.Branch.Get(repository.Id, repository.DefaultBranch);
         var latestCommit = mainBranch.Commit.Sha;
 
@@ -209,26 +207,34 @@ public sealed class DownloadSpirvCross : AsyncFrostingTask<BuildContext>
     }
 }
 
-public sealed class DownloadSpirvCrossIspc : FrostingTask<BuildContext>
+public sealed class DownloadSpirvCrossIspc : AsyncFrostingTask<BuildContext>
 {
-    public override void Run(BuildContext context)
+    public override async Task RunAsync(BuildContext context)
     {
-        var unzippedFolder = context.DownloadAndUnzipCompiler(
-            "https://github.com/GameTechDev/SPIRV-Cross/archive/master-ispc.zip",
-            "spirv-cross-ispc",
-            "trunk",
-            false);
+        var client = CreateGitHubClient();
+        var repository = await client.Repository.Get("GameTechDev", "SPIRV-Cross");
+        var mainBranch = await client.Repository.Branch.Get(repository.Id, repository.DefaultBranch);
+        var latestCommit = mainBranch.Commit.Sha;
 
-        context.MSBuild(unzippedFolder + "/SPIRV-Cross-master-ispc/msvc/SPIRV-Cross.vcxproj", context.CreateCppBuildSettings());
+        context.MaybeGetTrunkCompiler(latestCommit, "spirv-cross-ispc", () =>
+        {
+            var unzippedFolder = context.DownloadAndUnzipTrunkCompiler(
+                $"https://github.com/GameTechDev/SPIRV-Cross/archive/{repository.DefaultBranch}.zip",
+                "spirv-cross-ispc");
 
-        var binariesFolder = $"{context.SrcBinariesPath}/spirv-cross-ispc/trunk";
-        context.EnsureDirectoryExists(binariesFolder);
-        context.CleanDirectory(binariesFolder);
+            context.MSBuild(
+                unzippedFolder + $"/SPIRV-Cross-{repository.DefaultBranch}/msvc/SPIRV-Cross.vcxproj",
+                context.CreateCppBuildSettings());
 
-        context.CopyFiles(
-          $"{unzippedFolder}/SPIRV-Cross-master-ispc/msvc/{context.BuildConfiguration}/SPIRV-Cross.exe",
-          binariesFolder,
-          true);
+            var binariesFolder = $"{context.SrcBinariesPath}/spirv-cross-ispc/trunk";
+            context.EnsureDirectoryExists(binariesFolder);
+            context.CleanDirectory(binariesFolder);
+
+            context.CopyFiles(
+                $"{unzippedFolder}/SPIRV-Cross-{repository.DefaultBranch}/msvc/{context.BuildConfiguration}/SPIRV-Cross.exe",
+                binariesFolder,
+                true);
+        });
     }
 }
 
