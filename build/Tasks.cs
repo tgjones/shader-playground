@@ -261,19 +261,6 @@ public sealed class DownloadSpirvTools : FrostingTask<BuildContext>
     }
 }
 
-public sealed class DownloadSpirvToolsLegacy : FrostingTask<BuildContext>
-{
-    public override void Run(BuildContext context)
-    {
-        context.DownloadAndUnzipCompiler(
-            "https://github.com/KhronosGroup/SPIRV-Tools/releases/download/master-tot/SPIRV-Tools-master-windows-x64-Release.zip",
-            "spirv-tools-legacy",
-            "trunk",
-            true,
-            "bin/*.*");
-    }
-}
-
 public sealed class DownloadXShaderCompiler : FrostingTask<BuildContext>
 {
     public override void Run(BuildContext context)

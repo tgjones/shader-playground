@@ -20,11 +20,8 @@
         public const string SpirVCross = "spirv-cross";
         public const string SpirVCrossIspc = "spirv-cross-ispc";
         public const string SpirvCfg = "spirv-cfg";
-        public const string SpirvMarkvEncoder = "spirv-markv-encoder";
-        public const string SpirvMarkvDecoder = "spirv-markv-decoder";
         public const string SpirvOpt = "spirv-opt";
         public const string SpirvRemap = "spirv-remap";
-        public const string SpirvStats = "spirv-stats";
         public const string Tint = "tint";
         public const string XShaderCompiler = "xsc";
         public const string HlslCc = "hlslcc";
