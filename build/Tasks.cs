@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Cake.Common.IO;
 using Cake.Common.Net;
@@ -246,10 +247,10 @@ public sealed class DownloadSpirvTools : FrostingTask<BuildContext>
         // <meta http-equiv="refresh" content="0; url=https://storage.googleapis.com/spirv-tools/artifacts/prod/graphics_shader_compiler/spirv-tools/windows-msvc-2017-release/continuous/1336/20201217-105132/install.zip" />
         var downloadPageFileName = $"{context.ArtifactsPath}/spirv-tools-trunk.html";
         context.DownloadFile(
-            "https://storage.googleapis.com/spirv-tools/badges/build_link_windows_vs2017_release.html",
+            "https://storage.googleapis.com/spirv-tools/badges/build_link_windows_vs2019_release.html",
             downloadPageFileName);
-        var downloadPageHtml = System.IO.File.ReadAllText(downloadPageFileName);
-        var downloadPageUrl = System.Text.RegularExpressions.Regex.Match(downloadPageHtml, "url=([\\s\\S]+)\"").Groups[1].Value;
+        var downloadPageHtml = File.ReadAllText(downloadPageFileName);
+        var downloadPageUrl = Regex.Match(downloadPageHtml, "url=([\\s\\S]+)\"").Groups[1].Value;
 
         context.DownloadAndUnzipCompiler(
             downloadPageUrl,

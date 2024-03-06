@@ -23,10 +23,15 @@ namespace ShaderPlayground.Core.Compilers.SpirvTools
         {
             "vulkan1.0",
             "vulkan1.1",
+            "vulkan1.2",
+            "vulkan1.3",
             "spv1.0",
             "spv1.1",
             "spv1.2",
-            "spv1.3"
+            "spv1.3",
+            "spv1.4",
+            "spv1.5",
+            "spv1.6",
         };
 
         public ShaderCompilerResult Compile(ShaderCode shaderCode, ShaderCompilerArguments arguments, List<ShaderCompilerArguments> previousCompilerArguments)
