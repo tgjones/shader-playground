@@ -38,16 +38,27 @@ public sealed class DownloadDxc : FrostingTask<BuildContext>
     }
 }
 
-public sealed class DownloadGlslang : FrostingTask<BuildContext>
+public sealed class DownloadGlslang : AsyncFrostingTask<BuildContext>
 {
-    public override void Run(BuildContext context)
+    public override async Task RunAsync(BuildContext context)
     {
-        context.DownloadAndUnzipCompiler(
-            "https://github.com/KhronosGroup/glslang/releases/download/main-tot/glslang-master-windows-Release.zip",
-            "glslang",
-            "trunk",
-            false,
-            "bin/*.*");
+        var client = CreateGitHubClient();
+        var repository = await client.Repository.Get("KhronosGroup", "glslang");
+        var reference = await client.Git.Reference.Get(repository.Id, "tags/main-tot");
+        var commit = reference.Object.Sha;
+        var mainTotRelease = await client.Repository.Release.Get(repository.Id, "main-tot");
+
+        context.MaybeGetTrunkCompiler(commit, "glslang", () =>
+        {
+            var windowsArtifact = mainTotRelease.Assets.Single(x => x.Name == "glslang-master-windows-Release.zip");
+
+            context.DownloadAndUnzipCompiler(
+                windowsArtifact.BrowserDownloadUrl,
+                "glslang",
+                "trunk",
+                false,
+                "bin/*.*"); ;
+        });
     }
 }
 
@@ -161,32 +172,17 @@ public sealed class DownloadSpirvCross : AsyncFrostingTask<BuildContext>
         DownloadSpirvCross("2020-09-17", "8891bd3512");
         DownloadSpirvCross("2021-01-15", "9acb9ec31f");
 
-        var client = new GitHubClient(new ProductHeaderValue("ShaderPlaygroundBuild"));
+        var client = CreateGitHubClient();
         var repository = await client.Repository.Get("KhronosGroup", "SPIRV-Cross");
 
         var mainBranch = await client.Repository.Branch.Get(repository.Id, repository.DefaultBranch);
         var latestCommit = mainBranch.Commit.Sha;
 
-        context.Log.Information(Verbosity.Verbose, $"Latest commit is {latestCommit}");
-
-        var buildVerFilePath = $"{context.ArtifactsPath}/spirv-cross-trunk.buildver";
-        string cachedCommit = null;
-        if (File.Exists(buildVerFilePath))
+        context.MaybeGetTrunkCompiler(latestCommit, "spirv-cross", () =>
         {
-            cachedCommit = File.ReadAllText(buildVerFilePath);
-        }
-
-        if (latestCommit == cachedCommit)
-        {
-            context.Log.Information("trunk already up-to-date");
-        }
-        else
-        {
-            var unzippedFolder = context.DownloadAndUnzipCompiler(
+            var unzippedFolder = context.DownloadAndUnzipTrunkCompiler(
                 $"https://github.com/KhronosGroup/SPIRV-Cross/archive/{latestCommit}.zip",
-                "spirv-cross",
-                "trunk",
-                false);
+                "spirv-cross");
 
             var srcDirectory = $"{unzippedFolder}/SPIRV-Cross-{latestCommit}";
             context.RunAndCheckResult(
@@ -208,10 +204,8 @@ public sealed class DownloadSpirvCross : AsyncFrostingTask<BuildContext>
                 binariesFolder,
                 true);
 
-            File.WriteAllText(buildVerFilePath, latestCommit);
-
-            context.Log.Information("Downloaded trunk");
-        }
+            context.Log.Information("Downloaded and built trunk");
+        });
     }
 }
 

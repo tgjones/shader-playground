@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using Cake.Common;
 using Cake.Common.IO;
 using Cake.Common.Net;
@@ -6,6 +7,7 @@ using Cake.Common.Tools.MSBuild;
 using Cake.Compression;
 using Cake.Core.Diagnostics;
 using Cake.Core.IO;
+using Octokit;
 
 internal static class Utilities
 {
@@ -147,6 +149,11 @@ internal static class Utilities
         return unzippedFolder;
     }
 
+    public static string DownloadAndUnzipTrunkCompiler(this BuildContext context, string url, string binariesFolderName, ZipFormat format = ZipFormat.Zip)
+    {
+        return context.DownloadAndUnzipCompiler(url, binariesFolderName, "trunk", false, format);
+    }
+
     public static string DownloadAndUnzipCompiler(this BuildContext context, string url, string binariesFolderName, string version, bool cache, string filesToCopy, ZipFormat format = ZipFormat.Zip)
     {
         var tempFileName = context.DownloadCompiler(url, binariesFolderName, version, cache);
@@ -165,5 +172,37 @@ internal static class Utilities
           .WithProperty("WindowsTargetPlatformVersion", "10.0.19041.0")
           .SetConfiguration(context.BuildConfiguration)
           .SetVerbosity(Verbosity.Minimal);
+    }
+
+    public static GitHubClient CreateGitHubClient()
+    {
+        return new GitHubClient(new ProductHeaderValue("ShaderPlaygroundBuild"));
+    }
+
+    public static void MaybeGetTrunkCompiler(
+        this BuildContext context, 
+        string trunkCommit, 
+        string binariesFolderName,
+        Action getCompilerCallback)
+    {
+        context.Log.Information(Verbosity.Verbose, $"Latest commit is {trunkCommit}");
+
+        var buildVerFilePath = $"{context.ArtifactsPath}/{binariesFolderName}-trunk.buildver";
+
+        string cachedCommit = null;
+        if (context.FileExists(buildVerFilePath))
+        {
+            cachedCommit = File.ReadAllText(buildVerFilePath);
+        }
+
+        if (trunkCommit == cachedCommit)
+        {
+            context.Log.Information("trunk already up-to-date");
+            return;
+        }
+
+        getCompilerCallback();
+
+        File.WriteAllText(buildVerFilePath, trunkCommit);
     }
 }
