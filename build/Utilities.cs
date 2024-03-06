@@ -4,6 +4,7 @@ using Cake.Common.IO;
 using Cake.Common.Net;
 using Cake.Common.Tools.MSBuild;
 using Cake.Compression;
+using Cake.Core.Diagnostics;
 using Cake.Core.IO;
 
 internal static class Utilities
@@ -11,6 +12,9 @@ internal static class Utilities
     public static void RunAndCheckResult(this BuildContext context, FilePath exe, ProcessSettings settings)
     {
         var res = context.StartProcess(exe, settings);
+
+        context.Log.Information(Verbosity.Verbose, $"Process {exe} {settings.Arguments} completed with exit code {res}");
+
         if (res != 0)
         {
             throw new Exception($"'{exe}' failed with error code {res}");
@@ -24,6 +28,13 @@ internal static class Utilities
         if (!(cache || context.AlwaysCache) || !context.FileExists(tempFileName))
         {
             context.DownloadFile(url, tempFileName);
+            context.Log.Information(Verbosity.Verbose, $"Downloaded {url} to {tempFileName}");
+            context.Log.Information($"Downloaded {version}");
+        }
+        else
+        {
+            context.Log.Information(Verbosity.Verbose, $"{url} already cached in {tempFileName}");
+            context.Log.Information($"{version} already downloaded");
         }
 
         return tempFileName;
@@ -127,9 +138,11 @@ internal static class Utilities
     public static string DownloadAndUnzipCompiler(this BuildContext context, string url, string binariesFolderName, string version, bool cache, ZipFormat format = ZipFormat.Zip)
     {
         var tempFileName = context.DownloadCompiler(url, binariesFolderName, version, cache);
+
         var unzippedFolder = $"{context.ArtifactsPath}/{binariesFolderName}/{version}";
 
         context.Unzip(tempFileName, unzippedFolder, null, format);
+        context.Log.Information(Verbosity.Verbose, $"Unzipped {tempFileName} to {unzippedFolder}");
 
         return unzippedFolder;
     }
@@ -150,6 +163,7 @@ internal static class Utilities
           .UseToolVersion(MSBuildToolVersion.VS2022)
           .WithProperty("PlatformToolset", "v143")
           .WithProperty("WindowsTargetPlatformVersion", "10.0.19041.0")
-          .SetConfiguration(context.BuildConfiguration);
+          .SetConfiguration(context.BuildConfiguration)
+          .SetVerbosity(Verbosity.Minimal);
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Cake.Common.IO;
 using Cake.Common.Net;
 using Cake.Common.Tools.DotNet;
@@ -6,9 +8,11 @@ using Cake.Common.Tools.DotNet.Publish;
 using Cake.Common.Tools.DotNet.Test;
 using Cake.Common.Tools.MSBuild;
 using Cake.Compression;
+using Cake.Core.Diagnostics;
 using Cake.Core.IO;
 using Cake.Frosting;
 using Cake.Git;
+using Octokit;
 using static Utilities;
 
 public sealed class PrepareBuildDirectory : FrostingTask<BuildContext>
@@ -137,19 +141,19 @@ public sealed class DownloadMetalDeveloperTools : FrostingTask<BuildContext>
     }
 }
 
-public sealed class DownloadSpirvCross : FrostingTask<BuildContext>
+public sealed class DownloadSpirvCross : AsyncFrostingTask<BuildContext>
 {
-    public override void Run(BuildContext context)
+    public override async Task RunAsync(BuildContext context)
     {
         void DownloadSpirvCross(string version, string hash)
         {
             context.DownloadAndUnzipCompiler(
-              $"https://github.com/KhronosGroup/SPIRV-Cross/releases/download/{version}/spirv-cross-vs2017-64bit-{hash}.tar.gz",
-              "spirv-cross",
-              version,
-              true,
-              "bin/spirv-cross.exe",
-              ZipFormat.GZip);
+                $"https://github.com/KhronosGroup/SPIRV-Cross/releases/download/{version}/spirv-cross-vs2017-64bit-{hash}.tar.gz",
+                "spirv-cross",
+                version,
+                true,
+                "bin/spirv-cross.exe",
+                ZipFormat.GZip);
         }
 
         DownloadSpirvCross("2019-06-21", "b4e0163749");
@@ -157,31 +161,57 @@ public sealed class DownloadSpirvCross : FrostingTask<BuildContext>
         DownloadSpirvCross("2020-09-17", "8891bd3512");
         DownloadSpirvCross("2021-01-15", "9acb9ec31f");
 
-        var unzippedFolder = context.DownloadAndUnzipCompiler(
-          "https://github.com/KhronosGroup/SPIRV-Cross/archive/master.zip",
-          "spirv-cross",
-          "trunk",
-          false);
+        var client = new GitHubClient(new ProductHeaderValue("ShaderPlaygroundBuild"));
+        var repository = await client.Repository.Get("KhronosGroup", "SPIRV-Cross");
 
-        var srcDirectory = $"{unzippedFolder}/SPIRV-Cross-master";
-        context.RunAndCheckResult(
-            @"cmake.exe",
-            new ProcessSettings
-            {
-                Arguments = ".",
-                WorkingDirectory = srcDirectory
-            });
+        var mainBranch = await client.Repository.Branch.Get(repository.Id, repository.DefaultBranch);
+        var latestCommit = mainBranch.Commit.Sha;
 
-        context.MSBuild(srcDirectory + "/SPIRV-Cross.vcxproj", context.CreateCppBuildSettings());
+        context.Log.Information(Verbosity.Verbose, $"Latest commit is {latestCommit}");
 
-        var binariesFolder = $"{context.SrcBinariesPath}/spirv-cross/trunk";
-        context.EnsureDirectoryExists(binariesFolder);
-        context.CleanDirectory(binariesFolder);
+        var buildVerFilePath = $"{context.ArtifactsPath}/spirv-cross-trunk.buildver";
+        string cachedCommit = null;
+        if (File.Exists(buildVerFilePath))
+        {
+            cachedCommit = File.ReadAllText(buildVerFilePath);
+        }
 
-        context.CopyFiles(
-          $"{srcDirectory}/{context.BuildConfiguration}/SPIRV-Cross.exe",
-          binariesFolder,
-          true);
+        if (latestCommit == cachedCommit)
+        {
+            context.Log.Information("trunk already up-to-date");
+        }
+        else
+        {
+            var unzippedFolder = context.DownloadAndUnzipCompiler(
+                $"https://github.com/KhronosGroup/SPIRV-Cross/archive/{latestCommit}.zip",
+                "spirv-cross",
+                "trunk",
+                false);
+
+            var srcDirectory = $"{unzippedFolder}/SPIRV-Cross-{latestCommit}";
+            context.RunAndCheckResult(
+                @"cmake.exe",
+                new ProcessSettings
+                {
+                    Arguments = ".",
+                    WorkingDirectory = srcDirectory,
+                });
+
+            context.MSBuild(srcDirectory + "/SPIRV-Cross.vcxproj", context.CreateCppBuildSettings());
+
+            var binariesFolder = $"{context.SrcBinariesPath}/spirv-cross/trunk";
+            context.EnsureDirectoryExists(binariesFolder);
+            context.CleanDirectory(binariesFolder);
+
+            context.CopyFiles(
+                $"{srcDirectory}/{context.BuildConfiguration}/SPIRV-Cross.exe",
+                binariesFolder,
+                true);
+
+            File.WriteAllText(buildVerFilePath, latestCommit);
+
+            context.Log.Information("Downloaded trunk");
+        }
     }
 }
 

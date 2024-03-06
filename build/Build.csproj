@@ -8,5 +8,6 @@
     <PackageReference Include="Cake.Compression" Version="0.3.0" />
     <PackageReference Include="Cake.Frosting" Version="4.0.0" />
     <PackageReference Include="Cake.Git" Version="3.0.0" />
+    <PackageReference Include="Octokit" Version="10.0.0" />
   </ItemGroup>
 </Project>
