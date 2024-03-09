@@ -9,8 +9,10 @@ using Cake.Common.Tools.DotNet.Publish;
 using Cake.Common.Tools.DotNet.Test;
 using Cake.Common.Tools.MSBuild;
 using Cake.Compression;
+using Cake.Core;
 using Cake.Core.Diagnostics;
 using Cake.Core.IO;
+using Cake.Core.Tooling;
 using Cake.Frosting;
 using Cake.Git;
 using static Utilities;
@@ -25,16 +27,57 @@ public sealed class PrepareBuildDirectory : FrostingTask<BuildContext>
     }
 }
 
-public sealed class DownloadDxc : FrostingTask<BuildContext>
+public sealed class DownloadDxc : AsyncFrostingTask<BuildContext>
 {
-    public override void Run(BuildContext context)
+    public override async Task RunAsync(BuildContext context)
     {
-        context.DownloadAndUnzipCompiler(
-            "https://ci.appveyor.com/api/projects/dnovillo/directxshadercompiler/artifacts/build%2FRelease%2Fdxc-artifacts.zip?branch=main&pr=false&job=image%3A%20Visual%20Studio%202022",
-            "dxc",
-            "trunk",
-            false,
-            "bin/*.*");
+        var client = CreateGitHubClient();
+        var repository = await client.Repository.Get("microsoft", "DirectXShaderCompiler");
+        var mainBranch = await client.Repository.Branch.Get(repository.Id, repository.DefaultBranch);
+        var latestCommit = mainBranch.Commit.Sha;
+
+        context.MaybeGetTrunkCompiler(latestCommit, "dxc", () =>
+        {
+            var repoPath = $"{context.ArtifactsPath}/dxc";
+            if (context.DirectoryExists(repoPath))
+            {
+                context.DeleteDirectory(repoPath, new DeleteDirectorySettings { Recursive = true });
+            }
+
+            // Note that we don't actually checkout the commit we gathered above.
+            // Technically a commit could happen between these two things, but it's unlikely.
+            // And it's way easier to do it this way than clone, then checkout, then update submodules.
+            context.GitClone(repository.CloneUrl, repoPath, new GitCloneSettings
+            {
+                RecurseSubmodules = true,
+            });
+
+            var buildDirectory = $"{repoPath}/build";
+            context.CreateDirectory(buildDirectory);
+
+            context.RunAndCheckResult(
+                @"cmake.exe",
+                new ProcessSettings
+                {
+                    Arguments = ".. -C ../cmake/caches/PredefinedParams.cmake -DCMAKE_BUILD_TYPE=Release -DHLSL_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_TESTS=OFF",
+                    WorkingDirectory = buildDirectory,
+                });
+
+            context.MSBuild(
+                buildDirectory + "/tools/clang/tools/dxc/dxc.vcxproj",
+                context.CreateCppBuildSettings().WithWorkingDirectory(buildDirectory));
+
+            var binariesFolder = $"{context.SrcBinariesPath}/dxc/trunk";
+            context.EnsureDirectoryExists(binariesFolder);
+            context.CleanDirectory(binariesFolder);
+
+            context.CopyFiles(
+                $"{buildDirectory}/{context.BuildConfiguration}/bin/dx*.*",
+                binariesFolder,
+                true);
+
+            context.Log.Information("Downloaded and built trunk");
+        });
     }
 }
 
