@@ -316,6 +316,7 @@ public sealed class DownloadSlang : FrostingTask<BuildContext>
         DownloadSlang("0.18.25");
         DownloadSlang("0.24.20");
         DownloadSlang("2024.0.6");
+        DownloadSlang("2024.14.4");
     }
 }
 
